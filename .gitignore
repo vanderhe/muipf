@@ -1,0 +1,5 @@
+*~
+*.pyc
+_gitmsg.saved.txt
+build
+__pycache__
