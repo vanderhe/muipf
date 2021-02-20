@@ -44,11 +44,11 @@ add this. For the bash shell you should include in .bashrc::
 Testing MUIPF
 =============
 
-In the root directory, running
+In the root directory, running::
 
-pushd test
-python -m unittest -v -b
-popd
+  pushd test
+  python -m unittest -v -b
+  popd
 
 will validate the source of the package by executing regression tests.
 
