@@ -11,3 +11,17 @@
 
 class ScriptError(Exception):
     '''Exception thrown by the command line scripts.'''
+
+
+def print_line(lenght=80):
+    '''Prints a simple line of given length to stdout.
+
+    Args:
+
+        lenght (int): line lenght
+
+    '''
+
+    line = '-'
+
+    print('\n' + lenght * line + '\n')
