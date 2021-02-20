@@ -20,12 +20,15 @@ import logging
 from joblib import Parallel, delayed
 from skimage.io import imread
 import numpy as np
+from matplotlib import pyplot as plt
+from scipy import signal
 
 from muipf.scripts.common import ScriptError, print_line
 
 
 VERSION = (0, 1)
 MIOUT = 'hypersurface.dat'
+CCOUT = 'hypersurface_cc.dat'
 
 
 USAGE = \
@@ -71,6 +74,10 @@ def parse_cmdline_args(cmdlineargs=None):
     msg = 'targeted number of entries per bin'
     parser.add_argument('-b', '--binning', dest='entriesperbin',
                         default=50, type=int, help=msg)
+    
+    msg = 'if cross correlation should be calculated'
+    parser.add_argument('-c', '--ccorr', dest='tccorr', action='store_true',
+                        help=msg)
 
     msg = 'log level (INFO, DEBUG)'
     parser.add_argument('-l', '--loglvl', dest='loglvl',
@@ -108,7 +115,9 @@ def picslide(args):
     outfile = args.outfile
 
     entriesperbin = args.entriesperbin
+    tccorr = args.tccorr
     logging.info('Finished parsing arguments')
+
 
     logging.info('Starting reading images')
     try:
@@ -151,6 +160,19 @@ def picslide(args):
     np.savetxt(outfile, mi)
     print('written to file "{}"'.format(outfile))
     print_line()
+    
+    if tccorr:
+        logging.info('Starting cross correlation hypersurface calculation')
+        print('Calculating cross correlation hypersurface...')
+        ccorr = get_cross_correlation(baseim, subim)
+        logging.info('Finished cross correlation hypersurface calculation')
+        print('obtained properties:')
+        print('min: {0:.6f}, max: {1:.6f}, mean: {2:.6f}, rms: {3:.6f}'
+              .format(np.amin(ccorr), np.amax(ccorr), np.mean(ccorr),
+                      np.sqrt(np.mean(ccorr**2))))
+        np.savetxt(CCOUT, ccorr)
+        print('written to file "{}"'.format(CCOUT))
+        print_line()
 
     msg = 'Finished'
     logging.info(msg)
@@ -352,3 +374,30 @@ def print_header(version):
     print(vbar, 30 * space, 'Version: ', vstr, 31 * space, vbar)
     print(80 * hbar)
     print('')
+    
+    
+def get_cross_correlation(baseim, subim):
+    '''Calculates the cross correlation of two images
+
+    Args:
+
+        baseim (2darray): array representing the base image
+        subim (2darray): array representing the sub image
+
+    Returns:
+
+        ccorr (2darray): cross correlation of images
+
+    '''
+
+    logging.debug('Enter function: get_cross_correlation')
+    
+    padded_si = (np.pad(subim, ((0, np.shape(baseim)[0] - np.shape(subim)[0]), 
+                                (0, np.shape(baseim)[1] - np.shape(subim)[1]))))
+                        
+    basefft = np.fft.fft2(baseim)
+    subfft = np.fft.fft2(padded_si)
+    
+    ccorr = np.abs(np.fft.ifft2(basefft * np.conj(subfft)))
+    
+    return ccorr
