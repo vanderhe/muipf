@@ -13,15 +13,15 @@ other so that the most suitable overlap arises, in terms of mutual information.
 
 
 import os
+import sys
 import argparse
 import multiprocessing
 import logging
-from matplotlib import pyplot as plt
 from joblib import Parallel, delayed
 from skimage.io import imread
 import numpy as np
 
-from muipf.scripts.common import print_line
+from muipf.scripts.common import ScriptError, print_line
 
 
 VERSION = (0, 1)
@@ -64,6 +64,10 @@ def parse_cmdline_args(cmdlineargs=None):
     msg = 'input files'
     parser.add_argument('infiles', action='store', nargs=2, type=str, help=msg)
 
+    msg = 'output file'
+    parser.add_argument('-o', '--outfile', action='store', default=MIOUT,
+                        dest='outfile', type=str, help=msg)
+
     msg = 'targeted number of entries per bin'
     parser.add_argument('-b', '--binning', dest='entriesperbin',
                         default=50, type=int, help=msg)
@@ -101,15 +105,20 @@ def picslide(args):
     infiles = args.infiles
     infiles = [os.path.join(os.getcwd(), entry) for entry in infiles]
 
+    outfile = args.outfile
+
     entriesperbin = args.entriesperbin
     logging.info('Finished parsing arguments')
 
     logging.info('Starting reading images')
-    print('Reading images...')
-    baseim = np.asarray(imread(infiles[0], as_gray=True))
-    print('base image: ', infiles[0])
-    subim = np.asarray(imread(infiles[1], as_gray=True))
-    print('sub image: ', infiles[1])
+    try:
+        print('Reading images...')
+        baseim = np.asarray(imread(infiles[0], as_gray=True))
+        print('base image: ', infiles[0])
+        subim = np.asarray(imread(infiles[1], as_gray=True))
+        print('sub image: ', infiles[1])
+    except FileNotFoundError as exc:
+        raise ScriptError('Invalid infile path(s) specified.') from exc
     print_line()
     logging.info('Finished reading images')
 
@@ -136,12 +145,11 @@ def picslide(args):
         baseim, subim, (entropybase, entropysub), shifts, entriesperbin)
     logging.info('Finished hypersurface calculation')
     print('obtained properties:')
-    print('min: {0:.6f}'.format(np.amin(mi)))
-    print('max: {0:.6f}'.format(np.amax(mi)))
-    print('mean: {0:.6f}'.format(np.mean(mi)))
-    print('rms: {0:.6f}'.format(np.sqrt(np.mean(mi**2))))
-    np.savetxt(MIOUT, mi)
-    print('written to file "{}"'.format(MIOUT))
+    print('min: {0:.6f}, max: {1:.6f}, mean: {2:.6f}, rms: {3:.6f}'
+          .format(np.amin(mi), np.amax(mi), np.mean(mi),
+                  np.sqrt(np.mean(mi**2))))
+    np.savetxt(outfile, mi)
+    print('written to file "{}"'.format(outfile))
     print_line()
 
     msg = 'Finished'

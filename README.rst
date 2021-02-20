@@ -46,7 +46,9 @@ Testing MUIPF
 
 In the root directory, running
 
-python -m unittest
+pushd test
+python -m unittest -v -b
+popd
 
 will validate the source of the package by executing regression tests.
 
