@@ -55,17 +55,17 @@ will validate the source of the package by executing regression tests.
 For developers
 --------------
 
-To perform pylint static checking from the top level directory of the project, use
+To perform pylint static checking from the top level directory of the project, use::
 
-pylint3 --rcfile utils/srccheck/pylint/pylintrc-3.ini src/*
+  pylint --rcfile utils/srccheck/pylint/pylintrc-3.ini src/*
 
 
 Documentation
 =============
 
-Consult following resources for documentation:
+Consult following resources for the (currently very limited) documentation:
 
-* ToDo
+* automatically generated Argparse help page of the corresponding script
 
 
 License
