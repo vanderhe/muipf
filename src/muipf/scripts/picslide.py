@@ -13,15 +13,12 @@ other so that the most suitable overlap arises, in terms of mutual information.
 
 
 import os
-import sys
 import argparse
 import multiprocessing
 import logging
 from joblib import Parallel, delayed
 from skimage.io import imread
 import numpy as np
-from matplotlib import pyplot as plt
-from scipy import signal
 
 from muipf.scripts.common import ScriptError, print_line
 
@@ -74,7 +71,7 @@ def parse_cmdline_args(cmdlineargs=None):
     msg = 'targeted number of entries per bin'
     parser.add_argument('-b', '--binning', dest='entriesperbin',
                         default=50, type=int, help=msg)
-    
+
     msg = 'if cross correlation should be calculated'
     parser.add_argument('-c', '--ccorr', dest='tccorr', action='store_true',
                         help=msg)
@@ -154,29 +151,41 @@ def picslide(args):
         baseim, subim, (entropybase, entropysub), shifts, entriesperbin)
     logging.info('Finished hypersurface calculation')
     print('obtained properties:')
-    print('min: {0:.6f}, max: {1:.6f}, mean: {2:.6f}, rms: {3:.6f}'
+    print('min: {0:.6f}\nmax: {1:.6f}\nmean: {2:.6f}\nrms: {3:.6f}'
           .format(np.amin(mi), np.amax(mi), np.mean(mi),
                   np.sqrt(np.mean(mi**2))))
+    maxindices = get_max_position(mi)
+    print('maximum located at: ', maxindices)
     np.savetxt(outfile, mi)
-    print('written to file "{}"'.format(outfile))
+    print("written to file '{}'".format(outfile))
     print_line()
-    
+
     if tccorr:
-        logging.info('Starting cross correlation hypersurface calculation')
-        print('Calculating cross correlation hypersurface...')
-        ccorr = get_cross_correlation(baseim, subim)
-        logging.info('Finished cross correlation hypersurface calculation')
-        print('obtained properties:')
-        print('min: {0:.6f}, max: {1:.6f}, mean: {2:.6f}, rms: {3:.6f}'
-              .format(np.amin(ccorr), np.amax(ccorr), np.mean(ccorr),
-                      np.sqrt(np.mean(ccorr**2))))
-        np.savetxt(CCOUT, ccorr)
-        print('written to file "{}"'.format(CCOUT))
-        print_line()
+        handle_cross_correlation(baseim, subim)
 
     msg = 'Finished'
     logging.info(msg)
     print(msg)
+
+
+def get_max_position(array):
+    '''Get position of maximum value in input array.
+
+    Args:
+
+        array (ndarray): arbitrary array
+
+    Returns:
+
+        indices (tupel): contains coordinates of maximum entry
+
+    '''
+
+    logging.debug('Enter function: get_max_position')
+
+    indices = np.unravel_index(np.argmax(array, axis=None), array.shape)
+
+    return indices
 
 
 def get_displacement_vectors(hsize, vsize):
@@ -353,6 +362,58 @@ def get_mutual_information(entr1, entr2, entr12):
     return entr1 + entr2 - entr12
 
 
+def get_cross_correlation(baseim, subim):
+    '''Calculates the cross correlation of two images.
+
+    Args:
+
+        baseim (2darray): array representing the base image
+        subim (2darray): array representing the sub image
+
+    Returns:
+
+        ccorr (2darray): cross correlation of images
+
+    '''
+
+    logging.debug('Enter function: get_cross_correlation')
+
+    padded_si = (np.pad(subim, ((0, np.shape(baseim)[0] - np.shape(subim)[0]),
+                                (0, np.shape(baseim)[1] - np.shape(subim)[1]))))
+
+    basefft = np.fft.fft2(baseim)
+    subfft = np.fft.fft2(padded_si)
+
+    ccorr = np.abs(np.fft.ifft2(basefft * np.conj(subfft)))
+
+    return ccorr
+
+
+def handle_cross_correlation(baseim, subim):
+    '''Wrapper function that handles everything that concerns cross-correlation.
+
+    Args:
+
+        baseim (2darray): array representing the base image
+        subim (2darray): array representing the sub image
+
+    '''
+
+    logging.info('Starting cross correlation hypersurface calculation')
+    print('Calculating cross correlation hypersurface...')
+    ccorr = get_cross_correlation(baseim, subim)
+    logging.info('Finished cross correlation hypersurface calculation')
+    print('obtained properties:')
+    print('min: {0:.6f}\nmax: {1:.6f}\nmean: {2:.6f}\nrms: {3:.6f}'
+          .format(np.amin(ccorr), np.amax(ccorr), np.mean(ccorr),
+                  np.sqrt(np.mean(ccorr**2))))
+    indices = get_max_position(ccorr)
+    print('maximum located at: ', indices)
+    np.savetxt(CCOUT, ccorr)
+    print("written to file '{}'".format(CCOUT))
+    print_line()
+
+
 def print_header(version):
     '''Print stdout header of the picslide script.
 
@@ -374,30 +435,3 @@ def print_header(version):
     print(vbar, 30 * space, 'Version: ', vstr, 31 * space, vbar)
     print(80 * hbar)
     print('')
-    
-    
-def get_cross_correlation(baseim, subim):
-    '''Calculates the cross correlation of two images
-
-    Args:
-
-        baseim (2darray): array representing the base image
-        subim (2darray): array representing the sub image
-
-    Returns:
-
-        ccorr (2darray): cross correlation of images
-
-    '''
-
-    logging.debug('Enter function: get_cross_correlation')
-    
-    padded_si = (np.pad(subim, ((0, np.shape(baseim)[0] - np.shape(subim)[0]), 
-                                (0, np.shape(baseim)[1] - np.shape(subim)[1]))))
-                        
-    basefft = np.fft.fft2(baseim)
-    subfft = np.fft.fft2(padded_si)
-    
-    ccorr = np.abs(np.fft.ifft2(basefft * np.conj(subfft)))
-    
-    return ccorr
