@@ -85,6 +85,29 @@ class PicslideTest(common.TestInWorkDir):
         self.assertTrue(equal)
 
 
+    def test_with_ccorr(self):
+        '''Testcase for additional cross correlation calculation.'''
+
+        infile1 = self.get_full_inpath('retina_base.png')
+        infile2 = self.get_full_inpath('retina_sub.png')
+
+        reffile1 = self.get_full_inpath('hypersurface_ref_retina.dat')
+        reffile2 = self.get_full_inpath('hypersurface_cc_ref_retina.dat')
+        outfile1 = self.get_full_outpath('hypersurface_cur_retina.dat')
+        outfile2 = self.get_full_outpath('hypersurface_cc_cur_retina.dat')
+
+        cmdargs = [infile1, infile2, '-c', '-o', outfile1, '--ccoutfile',
+                   outfile2]
+
+        with common.OutputCatcher() as _:
+            picslide.main(cmdargs)
+
+        equal1 = common.hypersurface_file_equals(outfile1, reffile1)
+        equal2 = common.hypersurface_file_equals(outfile2, reffile2)
+
+        self.assertTrue(equal1 and equal2)
+
+
     def test_fail_invalid_infile(self):
         '''Testcase for invocation with invalid infile(s).'''
 
