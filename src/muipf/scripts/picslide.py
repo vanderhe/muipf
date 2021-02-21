@@ -64,9 +64,13 @@ def parse_cmdline_args(cmdlineargs=None):
     msg = 'input files'
     parser.add_argument('infiles', action='store', nargs=2, type=str, help=msg)
 
-    msg = 'output file'
+    msg = 'mutual information output file'
     parser.add_argument('-o', '--outfile', action='store', default=MIOUT,
-                        dest='outfile', type=str, help=msg)
+                        dest='mioutfile', type=str, help=msg)
+
+    msg = 'cross correlation output file'
+    parser.add_argument('--ccoutfile', action='store', default=CCOUT,
+                        dest='ccoutfile', type=str, help=msg)
 
     msg = 'targeted number of entries per bin'
     parser.add_argument('-b', '--binning', dest='entriesperbin',
@@ -109,7 +113,8 @@ def picslide(args):
     infiles = args.infiles
     infiles = [os.path.join(os.getcwd(), entry) for entry in infiles]
 
-    outfile = args.outfile
+    mioutfile = args.mioutfile
+    ccoutfile = args.ccoutfile
 
     entriesperbin = args.entriesperbin
     tccorr = args.tccorr
@@ -156,12 +161,12 @@ def picslide(args):
                   np.sqrt(np.mean(mi**2))))
     maxindices = get_max_position(mi)
     print('maximum located at: ', maxindices)
-    np.savetxt(outfile, mi)
-    print("written to file '{}'".format(outfile))
+    np.savetxt(mioutfile, mi)
+    print("written to file '{}'".format(mioutfile))
     print_line()
 
     if tccorr:
-        handle_cross_correlation(baseim, subim)
+        handle_cross_correlation(baseim, subim, ccoutfile)
 
     msg = 'Finished'
     logging.info(msg)
@@ -389,13 +394,14 @@ def get_cross_correlation(baseim, subim):
     return ccorr
 
 
-def handle_cross_correlation(baseim, subim):
+def handle_cross_correlation(baseim, subim, outfile):
     '''Wrapper function that handles everything that concerns cross-correlation.
 
     Args:
 
         baseim (2darray): array representing the base image
         subim (2darray): array representing the sub image
+        outfile (str): destination where to write output to
 
     '''
 
@@ -409,8 +415,8 @@ def handle_cross_correlation(baseim, subim):
                   np.sqrt(np.mean(ccorr**2))))
     indices = get_max_position(ccorr)
     print('maximum located at: ', indices)
-    np.savetxt(CCOUT, ccorr)
-    print("written to file '{}'".format(CCOUT))
+    np.savetxt(outfile, ccorr)
+    print("written to file '{}'".format(outfile))
     print_line()
 
 
