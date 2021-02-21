@@ -133,15 +133,14 @@ def picslide(args):
     print_line()
     logging.info('Finished reading images')
 
-    # calculate entropies of seperate images
-    logging.info('Starting individual entropy calculations')
-    print('Calculating individual entropies...')
-    entropybase = get_entropy(baseim, entriesperbin)
-    print('base image: {0:.6f}'.format(entropybase))
+    # calculate entropy of the sub image, scince it is the same
+    # for all displacements during the hypersurface scanning
+    logging.info('Starting individual entropy calculation')
+    print('Calculating individual entropy...')
     entropysub = get_entropy(subim, entriesperbin)
     print('sub image: {0:.6f}'.format(entropysub))
     print_line()
-    logging.info('Finished individual entropy calculations')
+    logging.info('Finished individual entropy calculation')
 
     hsize = np.shape(baseim)[0] - np.shape(subim)[0]
     vsize = np.shape(baseim)[1] - np.shape(subim)[1]
@@ -152,8 +151,7 @@ def picslide(args):
     # calculate mutual information hypersurface
     logging.info('Starting hypersurface calculation')
     print('Calculating mutual information hypersurface...')
-    mi = scan_hypersurface(
-        baseim, subim, (entropybase, entropysub), shifts, entriesperbin)
+    mi = scan_hypersurface(baseim, subim, entropysub, shifts, entriesperbin)
     logging.info('Finished hypersurface calculation')
     print('obtained properties:')
     print('min: {0:.6f}\nmax: {1:.6f}\nmean: {2:.6f}\nrms: {3:.6f}'
@@ -219,14 +217,14 @@ def get_displacement_vectors(hsize, vsize):
     return shifts
 
 
-def scan_hypersurface(baseim, subim, entropies, shifts, entriesperbin):
+def scan_hypersurface(baseim, subim, subentropy, shifts, entriesperbin):
     '''Calculates the full mutual information hypersurface.
 
     Args:
 
         baseim (2darray): array representing the base image
         subim (2darray): array representing the sub image
-        entropies (tupel): individual entropies of both images
+        subentropy (float): individual entropy of the sub image
         shifts (list): list of displacement vectors
         entriesperbin (int): targeted number of entries per bin
 
@@ -239,7 +237,7 @@ def scan_hypersurface(baseim, subim, entropies, shifts, entriesperbin):
     logging.debug('Enter function: scan_hypersurface')
 
     calc = lambda shift: scan_hypersurface_point(
-        baseim, subim, entropies, shift, entriesperbin)
+        baseim, subim, subentropy, shift, entriesperbin)
 
     num_cores = multiprocessing.cpu_count()
     mi = Parallel(n_jobs=num_cores)(delayed(calc)(shift) for shift in shifts)
@@ -250,14 +248,14 @@ def scan_hypersurface(baseim, subim, entropies, shifts, entriesperbin):
     return mi
 
 
-def scan_hypersurface_point(baseim, subim, entropies, shift, entriesperbin):
+def scan_hypersurface_point(baseim, subim, subentropy, shift, entriesperbin):
     '''Calculates the mutual information of a single hypersurface point.
 
     Args:
 
         baseim (2darray): array representing the base image
         subim (2darray): array representing the sub image
-        entropies (tupel): individual entropies of both images
+        subentropy (float): individual entropy of the sub image
         shift (1darray): displacement vector
         entriesperbin (int): targeted number of entries per bin
 
@@ -269,9 +267,13 @@ def scan_hypersurface_point(baseim, subim, entropies, shift, entriesperbin):
 
     logging.debug('Enter function: scan_hypersurface_point')
 
+    basesubview = baseim[shift[0]:np.shape(subim)[0] + shift[0],
+                         shift[1]:np.shape(subim)[1] + shift[1]]
+
+    baseentropy = get_entropy(basesubview, entriesperbin)
     jentropy = get_joint_entropy(baseim, subim, shift, entriesperbin)
 
-    mi = get_mutual_information(entropies[0], entropies[1], jentropy)
+    mi = get_mutual_information(baseentropy, subentropy, jentropy)
 
     return mi
 
@@ -334,7 +336,7 @@ def get_joint_entropy(baseim, subim, shift, entriesperbin):
                      shift[1]:np.shape(subim)[1] + shift[1]]
 
     jhist, _, _ = np.histogram2d(subview.flatten(), subim.flatten(),
-                                           bins=nbins, density=False)
+                                 bins=nbins, density=False)
     jhist = jhist.flatten()
     jhist = jhist / subim.size
 
