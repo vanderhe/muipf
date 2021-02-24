@@ -16,6 +16,7 @@ import os
 import argparse
 import multiprocessing
 import logging
+from tqdm import tqdm
 from joblib import Parallel, delayed
 from skimage.io import imread
 import numpy as np
@@ -240,7 +241,8 @@ def scan_hypersurface(baseim, subim, subentropy, shifts, entriesperbin):
         baseim, subim, subentropy, shift, entriesperbin)
 
     num_cores = multiprocessing.cpu_count()
-    mi = Parallel(n_jobs=num_cores)(delayed(calc)(shift) for shift in shifts)
+    mi = Parallel(n_jobs=num_cores)(delayed(calc)(shift) for shift in
+                                    tqdm(shifts))
 
     mi = np.reshape(mi, (np.shape(baseim)[0] - np.shape(subim)[0],
                          np.shape(baseim)[1] - np.shape(subim)[1]))
